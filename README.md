@@ -92,19 +92,25 @@ Community tutorials: [中文Windows教程 (Chinese Windows tutorial)](https://ww
 
 2. Creating the env and install the requirements.
   ```bash
-  git clone https://github.com/OpenTalker/SadTalker.git
+  git clone https://github.com/chenghanc/SadTalker
 
   cd SadTalker 
 
-  conda create -n sadtalker python=3.8
+  git checkout RTX-5090
 
-  conda activate sadtalker
+  conda create -n sadtalker5090 python=3.10 -y
 
-  pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu113
+  conda activate sadtalker5090
+
+  pip install "torch==2.7.0" "torchvision==0.22.0" "torchaudio==2.7.0" --index-url https://download.pytorch.org/whl/cu128
 
   conda install ffmpeg
 
   pip install -r requirements.txt
+
+  pip uninstall basicsr -y
+
+  pip install basicsr-fixed
 
   ### Coqui TTS is optional for gradio demo. 
   ### pip install TTS
