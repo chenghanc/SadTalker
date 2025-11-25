@@ -245,6 +245,17 @@ python inference.py --driven_audio <audio.wav> \
                     --enhancer gfpgan 
 ```
 
+##### Full body/image Generation with background video:
+
+```bash
+python inference_background.py --driven_audio <audio.wav> \
+                               --source_image <video.mp4 or picture.png> \
+                               --still \
+                               --preprocess full \
+                               --enhancer gfpgan \
+                               --background_video background.mp4
+```
+
 More examples and configuration and tips can be founded in the [ >>> best practice documents <<<](docs/best_practice.md).
 
 ## Citation
