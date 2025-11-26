@@ -18,6 +18,8 @@ def main(args):
     pic_path = args.source_image
     audio_path = args.driven_audio
     background_video = args.background_video
+    background_position = tuple(args.background_pos) if args.background_pos else None
+    background_scale = args.background_scale
     save_dir = os.path.join(args.result_dir, strftime("%Y_%m_%d_%H.%M.%S"))
     os.makedirs(save_dir, exist_ok=True)
     pose_style = args.pose_style
@@ -86,7 +88,7 @@ def main(args):
                                 expression_scale=args.expression_scale, still_mode=args.still, preprocess=args.preprocess, size=args.size)
     
     result = animate_from_coeff.generate(data, save_dir, pic_path, crop_info, \
-                                enhancer=args.enhancer, background_enhancer=args.background_enhancer, preprocess=args.preprocess, img_size=args.size, background_video=background_video)
+                                enhancer=args.enhancer, background_enhancer=args.background_enhancer, preprocess=args.preprocess, img_size=args.size, background_video=background_video, background_position=background_position, background_scale=background_scale)
     
     shutil.move(result, save_dir+'.mp4')
     print('The generated video is named:', save_dir+'.mp4')
@@ -114,6 +116,8 @@ if __name__ == '__main__':
     parser.add_argument('--enhancer',  type=str, default=None, help="Face enhancer, [gfpgan, RestoreFormer]")
     parser.add_argument('--background_enhancer',  type=str, default=None, help="background enhancer, [realesrgan]")
     parser.add_argument("--background_video", type=str, default=None, help="Optional background video to composite behind the talking face")
+    parser.add_argument("--background_pos", nargs=2, type=float, default=None, help="Placement (x y, 0-1) of the generated subject on the background; e.g., 0.8 0.5 for right-middle")
+    parser.add_argument("--background_scale", type=float, default=1.0, help="Scale factor for the pasted subject relative to source size (clamped to background frame)")
     parser.add_argument("--cpu", dest="cpu", action="store_true") 
     parser.add_argument("--face3dvis", action="store_true", help="generate 3d face and 3d landmarks") 
     parser.add_argument("--still", action="store_true", help="can crop back to the original videos for the full body aniamtion") 

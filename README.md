@@ -255,7 +255,8 @@ python inference.py --driven_audio <audio.wav> \
                                --still \
                                --preprocess full \
                                --enhancer gfpgan \
-                               --background_video background.mp4
+                               --background_video background.mp4 \
+                               --background_pos 0.85 0.55 --background_scale 0.75
 ```
 
 More examples and configuration and tips can be founded in the [ >>> best practice documents <<<](docs/best_practice.md).
