@@ -250,7 +250,7 @@ python inference.py --driven_audio <audio.wav> \
 If the background video resolution is extremely high, consider compressing using command like `ffmpeg -i cut.mp4 -vf scale=1280:-1 cut_small.mp4` before merging.
 
 ```bash
-python inference_background.py --driven_audio <audio.wav> \
+python inference.py --driven_audio <audio.wav> \
                                --source_image <video.mp4 or picture.png> \
                                --still \
                                --preprocess full \
