@@ -30,6 +30,15 @@ def _resolve_target_dimensions(crop_info, preprocess):
     return width, height
 
 
+def _clamp_location(x, y, w, h, frame_w, frame_h):
+    """Keep the seamlessClone center inside the frame considering patch size."""
+    half_w = max(w // 2, 0)
+    half_h = max(h // 2, 0)
+    x = max(min(x, frame_w - 1 - half_w), half_w)
+    y = max(min(y, frame_h - 1 - half_h), half_h)
+    return x, y
+
+
 def _extract_audio(source_video, audio_path):
     cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{source_video}" -vn -acodec pcm_s16le -ar 16000 "{audio_path}"'
     status = os.system(cmd)
@@ -51,7 +60,15 @@ def _next_background_frame(cap, fallback_frame):
     return fallback_frame.copy()
 
 
-def composite_with_background_video(foreground_video_path, background_video_path, crop_info, save_dir, preprocess='crop'):
+def composite_with_background_video(
+    foreground_video_path,
+    background_video_path,
+    crop_info,
+    save_dir,
+    preprocess='crop',
+    background_position=None,
+    background_scale=1.0,
+):
     if not os.path.isfile(foreground_video_path):
         raise ValueError('Foreground video was not found. Cannot composite with background video.')
     if not os.path.isfile(background_video_path):
@@ -88,11 +105,13 @@ def composite_with_background_video(foreground_video_path, background_video_path
 
     target_width, target_height = _resolve_target_dimensions(crop_info, preprocess)
     if target_width is None or target_height is None:
-        target_height, target_width = current_fg.shape[0], current_fg.shape[1]
+        target_width, target_height = current_fg.shape[1], current_fg.shape[0]
 
-    scale = min(bg_width / max(target_width, 1), bg_height / max(target_height, 1), 1.0)
-    scaled_width = max(1, int(round(target_width * scale)))
-    scaled_height = max(1, int(round(target_height * scale)))
+    # allow up/down scaling relative to source, but clamp to background frame
+    base_scale = min(bg_width / max(target_width, 1), bg_height / max(target_height, 1))
+    scale = max(0.01, base_scale * background_scale)
+    scaled_width = min(bg_width, max(1, int(round(target_width * scale))))
+    scaled_height = min(bg_height, max(1, int(round(target_height * scale))))
 
     tmp_composite_path = os.path.join(save_dir, f'{uuid.uuid4().hex}_bg_tmp.mp4')
     video_writer = cv2.VideoWriter(
@@ -110,7 +129,15 @@ def composite_with_background_video(foreground_video_path, background_video_path
             bg_frame = _next_background_frame(bg_cap, sample_bg)
             resized_foreground = cv2.resize(current_fg, (scaled_width, scaled_height))
             mask = 255 * np.ones(resized_foreground.shape, dtype=resized_foreground.dtype)
-            center_point = (bg_width // 2, bg_height // 2)
+
+            if background_position and len(background_position) == 2:
+                px = min(max(background_position[0], 0.0), 1.0)
+                py = min(max(background_position[1], 0.0), 1.0)
+                center_point = (int(bg_width * px), int(bg_height * py))
+            else:
+                center_point = (bg_width // 2, bg_height // 2)
+            center_point = _clamp_location(center_point[0], center_point[1], scaled_width, scaled_height, bg_width, bg_height)
+
             composed = cv2.seamlessClone(resized_foreground, bg_frame, mask, center_point, cv2.NORMAL_CLONE)
             video_writer.write(composed)
 
