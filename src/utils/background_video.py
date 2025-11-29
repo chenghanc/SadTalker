@@ -39,6 +39,36 @@ def _clamp_location(x, y, w, h, frame_w, frame_h):
     return x, y
 
 
+def _resolve_foreground_crop_box(foreground_crop, frame_w, frame_h):
+    """
+    Normalize a crop box for the foreground video. Accepts either normalized coords (0-1) or pixel values.
+    Returns (x1, y1, x2, y2) in pixel space or None if the box is invalid.
+    """
+    if not foreground_crop or len(foreground_crop) != 4:
+        return None
+
+    x1, y1, x2, y2 = foreground_crop
+    if max(map(abs, foreground_crop)) <= 1.0 + 1e-6:
+        # treat as normalized box
+        x1 = int(round(x1 * frame_w))
+        x2 = int(round(x2 * frame_w))
+        y1 = int(round(y1 * frame_h))
+        y2 = int(round(y2 * frame_h))
+    else:
+        x1, x2 = int(round(x1)), int(round(x2))
+        y1, y2 = int(round(y1)), int(round(y2))
+
+    x1 = max(0, min(x1, frame_w - 1))
+    x2 = max(0, min(x2, frame_w))
+    y1 = max(0, min(y1, frame_h - 1))
+    y2 = max(0, min(y2, frame_h))
+
+    if x2 <= x1 or y2 <= y1:
+        return None
+
+    return x1, y1, x2, y2
+
+
 def _extract_audio(source_video, audio_path):
     cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{source_video}" -vn -acodec pcm_s16le -ar 16000 "{audio_path}"'
     status = os.system(cmd)
@@ -68,6 +98,7 @@ def composite_with_background_video(
     preprocess='crop',
     background_position=None,
     background_scale=1.0,
+    foreground_crop=None,
 ):
     if not os.path.isfile(foreground_video_path):
         raise ValueError('Foreground video was not found. Cannot composite with background video.')
@@ -103,7 +134,15 @@ def composite_with_background_video(
     bg_height, bg_width = sample_bg.shape[:2]
     bg_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
-    target_width, target_height = _resolve_target_dimensions(crop_info, preprocess)
+    crop_box = _resolve_foreground_crop_box(foreground_crop, current_fg.shape[1], current_fg.shape[0])
+
+    target_width, target_height = (None, None)
+    if crop_box:
+        x1, y1, x2, y2 = crop_box
+        target_width, target_height = x2 - x1, y2 - y1
+    else:
+        target_width, target_height = _resolve_target_dimensions(crop_info, preprocess)
+
     if target_width is None or target_height is None:
         target_width, target_height = current_fg.shape[1], current_fg.shape[0]
 
@@ -127,7 +166,11 @@ def composite_with_background_video(
     try:
         while current_fg is not None:
             bg_frame = _next_background_frame(bg_cap, sample_bg)
-            resized_foreground = cv2.resize(current_fg, (scaled_width, scaled_height))
+            fg_frame = current_fg
+            if crop_box:
+                fg_frame = current_fg[y1:y2, x1:x2]
+
+            resized_foreground = cv2.resize(fg_frame, (scaled_width, scaled_height))
             mask = 255 * np.ones(resized_foreground.shape, dtype=resized_foreground.dtype)
 
             if background_position and len(background_position) == 2:

@@ -31,6 +31,7 @@ def main(args):
     background_video = args.background_video
     background_position = tuple(args.background_pos) if args.background_pos else None
     background_scale = args.background_scale
+    foreground_crop = args.foreground_crop
 
     current_root_path = os.path.split(sys.argv[0])[0]
 
@@ -101,6 +102,7 @@ def main(args):
             preprocess=args.preprocess,
             background_position=background_position,
             background_scale=background_scale,
+            foreground_crop=foreground_crop,
         )
 
     shutil.move(result, save_dir+'.mp4')
@@ -131,6 +133,7 @@ if __name__ == '__main__':
     parser.add_argument('--background_video', type=str, default=None, help="optional background video that replaces the static background")
     parser.add_argument("--background_pos", nargs=2, type=float, default=None, help="Placement (x y, 0-1) of the generated subject on the background; e.g., 0.8 0.5 for right-middle")
     parser.add_argument("--background_scale", type=float, default=1.0, help="Scale factor for the pasted subject relative to source size (clamped to background frame)")
+    parser.add_argument("--foreground_crop", nargs=4, type=float, default=None, help="Optional crop (x1 y1 x2 y2) on generated frames before background blending; use normalized 0-1 values to keep the full body area.")
     parser.add_argument("--cpu", dest="cpu", action="store_true") 
     parser.add_argument("--face3dvis", action="store_true", help="generate 3d face and 3d landmarks") 
     parser.add_argument("--still", action="store_true", help="can crop back to the original videos for the full body aniamtion") 
